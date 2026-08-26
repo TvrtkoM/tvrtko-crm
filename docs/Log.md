@@ -14,7 +14,7 @@ status here and append any notes/deviations under **Log**.
 | 2   | Data layer                          | @docs/2_data_layer.md       | ✅ Done        |
 | 3   | Backend for Kanban boards           | @docs/3_backend_kanban.md   | ✅ Done        |
 | 4   | PDF route                           | @docs/4_pdf_route.md        | ✅ Done        |
-| 5   | Kanban frontend                     | @docs/5_kanban_frontend.md  | ⬜ Not started |
+| 5   | Kanban frontend                     | @docs/5_kanban_frontend.md  | ✅ Done        |
 | 6   | Forms (create/edit + offer shortcut)| @docs/6_forms.md            | ⬜ Not started |
 | 7   | Overview: tables + show + dashboard | @docs/7_overview.md         | ⬜ Not started |
 | 8   | PDF Blade template                  | @docs/8_pdf_template.md     | ⬜ Not started |
@@ -149,3 +149,44 @@ _Append entries as steps complete: date · step · what changed · deviations ·
     `Content-Disposition: attachment` with the `{offer_number}.pdf` filename, and a `%PDF` body
     signature. `php artisan test --compact`: 78 tests, 77 passed, 1 pre-existing skip.
     `vendor/bin/pint --format agent`: clean. No frontend changes, so no `npm run build` needed.
+
+- **2026-08-26 · Step 5 (Kanban frontend).** Installed `vue-draggable-plus` (approved). Added the
+  generic `resources/js/components/KanbanBoard.vue`: props are `columns` (the enum `options()`
+  payload), `cards` (records grouped by status), `cardsProp` (the Inertia prop name), the
+  Wayfinder `statusAction`, plus `idKey`/`statusKey`/`errorMessage` config. Columns render every
+  enum case in order with a colored dot (`color()`), label, and live count badge; empty columns
+  show a muted "No cards" placeholder; `cards === undefined` renders `Skeleton` cards. The board
+  is horizontally scrollable with per-column vertical scroll, and dark-mode aware. Cards are
+  supplied by the `#card="{ card }"` scoped slot. Drag uses one `VueDraggable` per column sharing
+  a single `group`; a cross-column drop fires
+  `router.optimistic(...).patch(statusAction(id).url, { status })` with `preserveScroll` +
+  `preserveState`, so the card moves instantly and Inertia rolls the props back (plus a
+  `vue-sonner` error toast via `onError`) on failure. Same-column drops are a no-op.
+  Drag-safety: SortableJS `filter="[data-kanban-ignore]"` with `preventOnFilter: false`; the card
+  title `<Link>` and the Deal card's "+ Offer" button both carry `data-kanban-ignore`, so clicking
+  them navigates instead of starting a drag.
+  - Board pages `pages/{Company,Contact,Deal,Offer}/Board.vue` replace the step-3 stubs, each with
+    the spec §3 card content, the `Board | List` toggle (new `components/ViewToggle.vue` — the
+    List half renders **disabled** until step 7 adds the list views), and the Offers board's
+    "+ New offer" header button. Deal cards link to `offers.create({ query: { deal: id } })`.
+  - Supporting files: `types/kanban.ts` (`KanbanColumn`, `KanbanCards<T>`), `types/models.ts`
+    (Company/Contact/Deal/Offer/OfferItem prop shapes), `lib/statusColor.ts` (static Tailwind
+    class map for the enum `color()` names — never interpolated, so the scanner sees them), and
+    `lib/format.ts` (`formatCurrency` → `1.234,56 €`, `formatDate` → `26 Aug 2026`).
+    `components/AppSidebar.vue` gained nav links to the four boards (nav is finalized in step 7).
+  - **Deviations / notes:** the boards' card props are *not* deferred (step 3 delivers them
+    inline and its tests assert that), so the skeleton branch is dormant support for a later
+    switch rather than the current path. The card **title** is the click-through link rather than
+    the whole card, so the grab surface and the navigation surface never fight. `groupBy` omits
+    statuses with no records, so `KanbanBoard` treats a missing group as an empty column.
+    No Pest browser test: `pestphp/pest-plugin-browser` is not installed and dependency changes
+    need separate approval — the doc marks that test optional.
+  - Tests: `tests/Feature/KanbanBoardTest.php` — a dataset asserting all four boards return 200
+    with the right component and exactly one column per enum case matching `options()` (value,
+    label, color, order), plus a per-entity test that the grouped cards carry the exact fields
+    each card renders (`contacts_count`/`deals_count`, `company.name`, `value`,
+    `deal.company.name`, `total`), and two tests covering the drag round-trip (a valid `PATCH
+    …/status` moves the card between columns after reload; an invalid one 422s and leaves it
+    put). `php artisan test --compact`: 88 tests, 87 passed, 1 pre-existing skip.
+    `vendor/bin/pint --dirty --format agent`: clean. `npm run build`, `npm run types:check`,
+    `npm run lint:check`, `npm run format:check`: all clean.

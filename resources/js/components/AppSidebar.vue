@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
+import {
+    BookOpen,
+    Building2,
+    FileText,
+    FolderGit2,
+    Handshake,
+    LayoutGrid,
+    Users,
+} from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,6 +23,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { board as companiesBoard } from '@/routes/companies';
+import { board as contactsBoard } from '@/routes/contacts';
+import { board as dealsBoard } from '@/routes/deals';
+import { board as offersBoard } from '@/routes/offers';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -22,6 +34,26 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Companies',
+        href: companiesBoard(),
+        icon: Building2,
+    },
+    {
+        title: 'Contacts',
+        href: contactsBoard(),
+        icon: Users,
+    },
+    {
+        title: 'Deals',
+        href: dealsBoard(),
+        icon: Handshake,
+    },
+    {
+        title: 'Offers',
+        href: offersBoard(),
+        icon: FileText,
     },
 ];
 
