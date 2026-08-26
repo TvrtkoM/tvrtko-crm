@@ -11,7 +11,7 @@ status here and append any notes/deviations under **Log**.
 | #   | Step                                | Guide                       | Status         |
 | --- | ----------------------------------- | --------------------------- | -------------- |
 | 1   | Auth trim + seed DemoUser           | @docs/1_auth_trim.md        | ✅ Done        |
-| 2   | Data layer                          | @docs/2_data_layer.md       | ⬜ Not started |
+| 2   | Data layer                          | @docs/2_data_layer.md       | ✅ Done        |
 | 3   | Backend for Kanban boards           | @docs/3_backend_kanban.md   | ⬜ Not started |
 | 4   | PDF route                           | @docs/4_pdf_route.md        | ⬜ Not started |
 | 5   | Kanban frontend                     | @docs/5_kanban_frontend.md  | ⬜ Not started |
@@ -73,3 +73,33 @@ _Append entries as steps complete: date · step · what changed · deviations ·
   - **Follow-up:** this sandbox has no `php` on `PATH`; used the Nix-provided
     `php-with-extensions-8.4.24` build directly (the bare `php-8.4.24` derivation is missing most
     extensions, e.g. `filter`, and can't even boot `artisan`).
+
+- **2026-08-26 · Step 2 (Data layer).** Added `CompanyStatus`, `ContactStatus`, `DealStage`,
+  `OfferStatus` string-backed enums in `app/Enums` (each with `label()`/`color()`/`options()`,
+  the latter shared via `App\Enums\Concerns\HasEnumOptions`). Generated the five models
+  (`Company`, `Contact`, `Deal`, `Offer`, `OfferItem`) with one portable migration per table,
+  factories, and relationships/casts/`#[Fillable]` per spec. `Offer` gets `subtotal`/
+  `tax_amount`/`total` computed accessors and a `booted()` `creating` hook that generates
+  `offer_number` (`OFF-{year}-{seq:0000}`, per-year sequence via max-existing-number lookup) and
+  defaults `issue_date` to today. `OfferItem` gets a `line_total` accessor. Extended
+  `DatabaseSeeder` to create one company per `CompanyStatus` (+3 extra), one contact per
+  `ContactStatus` and one deal per `DealStage` for every company, and offers cycling through
+  every `OfferStatus` across a shuffled sample of deals (line items auto-attached via
+  `OfferFactory::configure()`/`afterCreating`) — every Kanban column has cards for all four
+  entities.
+  - **Deviations from the doc:** removed the `WithoutModelEvents` trait from `DatabaseSeeder`
+    (present in the stock seeder) — it suppresses Eloquent's `creating` event during seeding,
+    which would have left every seeded `Offer.offer_number` null and broken the seed on the
+    `unique` constraint. Renamed `ContactFactory`'s `New`-status state method to `newStatus()`
+    instead of `new()` — `Factory::new()` is a static method on the base `Factory` class, so
+    overriding it as an instance state method fatals at runtime.
+  - Money/decimal accessors (`line_total`, `subtotal`, `tax_amount`, `total`) return floats
+    rounded to 2 decimals rather than strings, to keep arithmetic straightforward for the
+    Kanban/forms work in later steps; the underlying columns remain `decimal:2`-cast.
+  - Tests: `tests/Feature/Models/{Company,Contact,Deal,Offer,OfferItem}ModelTest.php` cover
+    relationship resolution, enum casts, Offer totals math, `offer_number` format/sequencing
+    (including per-year reset), and FK on-delete behavior (Company delete nulls Contacts,
+    cascades Deals; Deal delete cascades Offers + OfferItems). `php artisan test --compact`:
+    40 tests, 39 passed, 1 pre-existing skip (unrelated 2FA test from step 1).
+  - `php artisan migrate:fresh --seed` verified clean on SQLite; seeded data spans all statuses
+    of all four entities (spot-checked via tinker).
