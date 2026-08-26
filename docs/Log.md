@@ -10,7 +10,7 @@ status here and append any notes/deviations under **Log**.
 
 | #   | Step                                | Guide                       | Status         |
 | --- | ----------------------------------- | --------------------------- | -------------- |
-| 1   | Auth trim + seed DemoUser           | @docs/1_auth_trim.md        | ⬜ Not started |
+| 1   | Auth trim + seed DemoUser           | @docs/1_auth_trim.md        | ✅ Done        |
 | 2   | Data layer                          | @docs/2_data_layer.md       | ⬜ Not started |
 | 3   | Backend for Kanban boards           | @docs/3_backend_kanban.md   | ⬜ Not started |
 | 4   | PDF route                           | @docs/4_pdf_route.md        | ⬜ Not started |
@@ -42,4 +42,34 @@ Pagination — steps 6 & 7) are not npm dependencies.
 
 _Append entries as steps complete: date · step · what changed · deviations · follow-ups._
 
-- _(nothing yet)_
+- **2026-08-26 · Step 1 (Auth trim + seed DemoUser).** Trimmed Fortify to email+password login
+  only (`config/fortify.php` features `[]`); removed registration, password reset, email
+  verification, 2FA, and passkeys end-to-end (routes, `FortifyServiceProvider` view/action/limiter
+  bindings, `User` model traits, Vue pages/components). Seeded `DemoUser` /
+  `demo@example.com` / `DemoUser` in `DatabaseSeeder`.
+  - **Deviations from the doc:** two dead-code spots the doc didn't call out, found only because
+    `npm run build` failed on missing imports: `resources/js/pages/auth/ConfirmPassword.vue`
+    (kept per the doc) rendered a `<PasskeyVerify />` "confirm with passkey" option — removed it,
+    keeping just the password-confirm form. `resources/js/pages/settings/Profile.vue` had a
+    "resend verification email" block importing `@/routes/verification` — removed it (dead in
+    practice already, since `User` doesn't implement `MustVerifyEmail`).
+  - Also deleted now-orphaned files not explicitly named in the doc:
+    `components/PasskeyItem.vue`, `ManageTwoFactor.vue`, `TwoFactorSetupModal.vue`,
+    `TwoFactorRecoveryCodes.vue`, `composables/useTwoFactorAuth.ts`, and the unused `Passkey` /
+    `TwoFactorConfigContent` types in `types/auth.ts` — all were only reachable through components
+    the doc did ask to delete.
+  - Per user approval, deleted (rather than rewrote) `RegistrationTest`, `PasswordResetTest`,
+    `EmailVerificationTest`, `VerificationNotificationTest`, `TwoFactorChallengeTest`, and trimmed
+    the 2FA/passkey tests out of `SecurityTest` (kept the password-update tests, generalized the
+    password-confirmation-guard test since `RequirePassword` on `settings/security` is unrelated
+    to 2FA). Added `tests/Feature/Auth/DemoUserLoginTest.php` for the `/register` 404 + DemoUser
+    login acceptance criteria.
+  - **Left untouched (harmless per doc):** `two_factor_*` DB columns/migration, `passkeys` table,
+    `SecurityController`'s `canManageTwoFactor`/`canManagePasskeys`/`passkeys` props (always
+    false/empty now but harmless), `ProfileController`'s `mustVerifyEmail` prop, one still-skipped
+    2FA test inside `AuthenticationTest` (kept per doc, self-skips via `skipUnlessFortifyHas`),
+    and the `@laravel/passkeys` npm package (unused now, but dependency changes need separate
+    approval).
+  - **Follow-up:** this sandbox has no `php` on `PATH`; used the Nix-provided
+    `php-with-extensions-8.4.24` build directly (the bare `php-8.4.24` derivation is missing most
+    extensions, e.g. `filter`, and can't even boot `artisan`).
