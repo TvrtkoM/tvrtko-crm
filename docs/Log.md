@@ -17,7 +17,7 @@ status here and append any notes/deviations under **Log**.
 | 5   | Kanban frontend                     | @docs/5_kanban_frontend.md  | ✅ Done        |
 | 6   | Forms (create/edit + offer shortcut)| @docs/6_forms.md            | ✅ Done        |
 | 7   | Overview: tables + show + dashboard | @docs/7_overview.md         | ✅ Done        |
-| 8   | PDF Blade template                  | @docs/8_pdf_template.md     | ⬜ Not started |
+| 8   | PDF Blade template                  | @docs/8_pdf_template.md     | ✅ Done        |
 
 Legend: ⬜ Not started · 🟡 In progress · ✅ Done
 
@@ -293,3 +293,24 @@ _Append entries as steps complete: date · step · what changed · deviations ·
     146 tests, 145 passed, 1 pre-existing skip. `vendor/bin/pint --dirty --format agent`,
     `npm run lint:check`, `npm run format:check`, `npm run types:check`, `npm run build`: clean.
     `vendor/bin/phpstan analyse`: the same 7 pre-existing errors as before the step, none new.
+
+- **2026-08-26 · Step 8 (PDF Blade template) — project complete.** Replaced the step-4 placeholder
+  `resources/views/pdf/offer.blade.php` with the full table-based, inline-CSS layout: a
+  "Tvrtko CRM" header with offer meta (number, issue/valid-until dates, status) right-aligned next
+  to it; a two-column bill-to block (deal's Company name/address/city+country/email and its
+  primary Contact name/email/phone, each "—" when absent); a line-items table (description,
+  quantity, unit price, line total) iterated over `items->sortBy('position')`; a right-aligned
+  totals block (subtotal → tax (rate %) → total); and a terms/footer section rendering `notes`
+  (omitted entirely when empty).
+  - **Shared formatting helper:** rather than add a new `app/` base folder (needs approval per
+    `CLAUDE.md`) for a single `Money`-style class, the money formatter is a local closure declared
+    once at the top of the Blade file (`$money = fn (float $amount) => number_format($amount, 2,
+    ',', '.').' €'`) and reused for every line item, subtotal, tax, and total — matching the UI's
+    `formatCurrency` (`resources/js/lib/format.ts`) Croatian-style output (`1.234,56 €`) without
+    duplicating the format string five times.
+  - No deviations from the doc otherwise.
+  - Tests: the existing step-4 `OfferControllerTest` "pdf streams a downloadable PDF attachment"
+    test still passes unchanged (200 / `application/pdf` / `attachment` filename / `%PDF` body) —
+    the doc's step 8 acceptance criteria don't require new assertions beyond a manual visual check.
+    `php artisan test --compact`: 146 tests, 145 passed, 1 pre-existing skip. `vendor/bin/pint
+    --dirty --format agent`: clean (no PHP files touched, only the Blade view).
