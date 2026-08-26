@@ -25,6 +25,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('offers/board', [OfferController::class, 'board'])->name('offers.board');
     Route::patch('offers/{offer}/status', [OfferController::class, 'updateStatus'])->name('offers.status');
+    Route::get('offers/{offer}/pdf', [OfferController::class, 'pdf'])->name('offers.pdf');
     Route::resource('offers', OfferController::class);
 });
 

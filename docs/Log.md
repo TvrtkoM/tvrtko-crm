@@ -13,7 +13,7 @@ status here and append any notes/deviations under **Log**.
 | 1   | Auth trim + seed DemoUser           | @docs/1_auth_trim.md        | ✅ Done        |
 | 2   | Data layer                          | @docs/2_data_layer.md       | ✅ Done        |
 | 3   | Backend for Kanban boards           | @docs/3_backend_kanban.md   | ✅ Done        |
-| 4   | PDF route                           | @docs/4_pdf_route.md        | ⬜ Not started |
+| 4   | PDF route                           | @docs/4_pdf_route.md        | ✅ Done        |
 | 5   | Kanban frontend                     | @docs/5_kanban_frontend.md  | ⬜ Not started |
 | 6   | Forms (create/edit + offer shortcut)| @docs/6_forms.md            | ⬜ Not started |
 | 7   | Overview: tables + show + dashboard | @docs/7_overview.md         | ⬜ Not started |
@@ -136,3 +136,16 @@ _Append entries as steps complete: date · step · what changed · deviations ·
     persistence + `offer_number` generation + the `?deal` create-time lock. `php artisan test
     --compact`: 77 tests, 76 passed, 1 pre-existing skip. `vendor/bin/pint --format agent` on
     all touched/new files: clean. `npm run build`: clean.
+
+- **2026-08-26 · Step 4 (PDF route).** Added `barryvdh/laravel-dompdf` (`^3.1`). New
+  `GET /offers/{offer}/pdf` route (named `offers.pdf`) and `OfferController@pdf`, eager-loading
+  `deal.company`, `deal.contact`, `items` and streaming
+  `Pdf::loadView('pdf.offer', [...])->download($offer->offer_number.'.pdf')`. Added the minimal
+  placeholder template `resources/views/pdf/offer.blade.php` (title, offer number, total) — step
+  8 replaces it with the full layout. Regenerated Wayfinder actions.
+  - No deviations from the doc.
+  - Tests: extended `tests/Feature/Controllers/OfferControllerTest.php` with the guest-redirect
+    case for `offers.pdf` and a new test asserting `200`, `application/pdf`,
+    `Content-Disposition: attachment` with the `{offer_number}.pdf` filename, and a `%PDF` body
+    signature. `php artisan test --compact`: 78 tests, 77 passed, 1 pre-existing skip.
+    `vendor/bin/pint --format agent`: clean. No frontend changes, so no `npm run build` needed.

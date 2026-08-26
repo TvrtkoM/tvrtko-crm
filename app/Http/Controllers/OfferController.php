@@ -7,11 +7,13 @@ use App\Http\Requests\StoreOfferRequest;
 use App\Http\Requests\UpdateOfferRequest;
 use App\Models\Deal;
 use App\Models\Offer;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class OfferController extends Controller
 {
@@ -126,6 +128,17 @@ class OfferController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Offer updated.')]);
 
         return to_route('offers.show', $offer);
+    }
+
+    /**
+     * Stream the offer as a downloadable PDF.
+     */
+    public function pdf(Offer $offer): HttpResponse
+    {
+        $offer->load(['deal.company', 'deal.contact', 'items']);
+
+        return Pdf::loadView('pdf.offer', ['offer' => $offer])
+            ->download($offer->offer_number.'.pdf');
     }
 
     /**

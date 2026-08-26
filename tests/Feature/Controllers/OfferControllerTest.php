@@ -19,6 +19,7 @@ test('guests are redirected to login on every offer route', function () {
     $this->put(route('offers.update', $offer))->assertRedirect(route('login'));
     $this->patch(route('offers.status', $offer))->assertRedirect(route('login'));
     $this->delete(route('offers.destroy', $offer))->assertRedirect(route('login'));
+    $this->get(route('offers.pdf', $offer))->assertRedirect(route('login'));
 });
 
 test('create honors an optional deal query param and locks the deal', function () {
@@ -138,6 +139,19 @@ test('board renders the correct Inertia component with grouped records and colum
         ->has('offers.'.OfferStatus::Accepted->value, 1)
         ->has('statuses', 5)
     );
+});
+
+test('pdf streams a downloadable PDF attachment', function () {
+    $this->actingAs(User::factory()->create());
+    $offer = Offer::factory()->create();
+
+    $response = $this->get(route('offers.pdf', $offer));
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'application/pdf');
+    $this->assertStringContainsString('attachment', $response->headers->get('Content-Disposition'));
+    $this->assertStringContainsString('filename='.$offer->offer_number.'.pdf', $response->headers->get('Content-Disposition'));
+    expect(substr($response->getContent(), 0, 4))->toBe('%PDF');
 });
 
 test('destroy deletes the offer and cascades its items', function () {
