@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { InertiaLinkProps } from '@inertiajs/vue3';
-import { Link, useForm } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import {
     store,
@@ -8,7 +8,7 @@ import {
 } from '@/actions/App/Http/Controllers/ContactController';
 import FormField from '@/components/FormField.vue';
 import SelectInput from '@/components/SelectInput.vue';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
@@ -57,6 +57,16 @@ function submit(): void {
     form.submit(contact ? update(contact.id) : store(), {
         preserveScroll: true,
     });
+}
+/** Return to the previous page; fall back to a fixed route on direct entry. */
+function goBack(): void {
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        router.visit(
+            typeof cancelHref === 'string' ? cancelHref : cancelHref.url,
+        );
+    }
 }
 </script>
 
@@ -166,12 +176,9 @@ function submit(): void {
         </Card>
 
         <div class="flex items-center justify-end gap-3">
-            <Link
-                :href="cancelHref"
-                :class="buttonVariants({ variant: 'outline' })"
-            >
-                Cancel
-            </Link>
+            <Button type="button" variant="outline" @click="goBack">
+                Back
+            </Button>
 
             <Button type="submit" :disabled="form.processing">
                 <Spinner v-if="form.processing" />

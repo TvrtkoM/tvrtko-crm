@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import {
-    Building2,
-    FileText,
-    Handshake,
-    LayoutGrid,
-    Users,
-} from '@lucide/vue';
+import { Building2, FileText, Handshake, LayoutGrid, Users } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
