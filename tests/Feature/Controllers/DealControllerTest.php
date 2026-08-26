@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CompanyStatus;
 use App\Enums\DealStage;
 use App\Models\Company;
 use App\Models\Deal;
@@ -91,6 +92,53 @@ test('updateStatus changes the status', function () {
 
     $response->assertRedirect();
     expect($deal->fresh()->status)->toBe(DealStage::Won);
+});
+
+test('dragging a deal to Won promotes its company to Customer', function () {
+    $this->actingAs(User::factory()->create());
+    $company = Company::factory()->create(['status' => CompanyStatus::Prospect]);
+    $deal = Deal::factory()->for($company)->create(['status' => DealStage::Negotiation]);
+
+    $this->patch(route('deals.status', $deal), ['status' => DealStage::Won->value]);
+
+    expect($company->fresh()->status)->toBe(CompanyStatus::Customer);
+});
+
+test('updating a deal to Won promotes its company to Customer', function () {
+    $this->actingAs(User::factory()->create());
+    $company = Company::factory()->create(['status' => CompanyStatus::Lead]);
+    $deal = Deal::factory()->for($company)->create(['status' => DealStage::Proposal]);
+
+    $this->put(route('deals.update', $deal), [
+        'company_id' => $company->id,
+        'title' => $deal->title,
+        'status' => DealStage::Won->value,
+    ]);
+
+    expect($company->fresh()->status)->toBe(CompanyStatus::Customer);
+});
+
+test('storing a deal already Won promotes its company to Customer', function () {
+    $this->actingAs(User::factory()->create());
+    $company = Company::factory()->create(['status' => CompanyStatus::Prospect]);
+
+    $this->post(route('deals.store'), [
+        'company_id' => $company->id,
+        'title' => 'Closed Won',
+        'status' => DealStage::Won->value,
+    ]);
+
+    expect($company->fresh()->status)->toBe(CompanyStatus::Customer);
+});
+
+test('moving a deal to Lost leaves the company status unchanged', function () {
+    $this->actingAs(User::factory()->create());
+    $company = Company::factory()->create(['status' => CompanyStatus::Prospect]);
+    $deal = Deal::factory()->for($company)->create(['status' => DealStage::Negotiation]);
+
+    $this->patch(route('deals.status', $deal), ['status' => DealStage::Lost->value]);
+
+    expect($company->fresh()->status)->toBe(CompanyStatus::Prospect);
 });
 
 test('updateStatus rejects a value outside the enum', function () {

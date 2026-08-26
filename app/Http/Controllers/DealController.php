@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CompanyStatus;
 use App\Enums\DealStage;
 use App\Enums\OfferStatus;
 use App\Http\Controllers\Concerns\BuildsIndexQueries;
@@ -96,6 +97,8 @@ class DealController extends Controller
     {
         $deal = Deal::create($request->validated());
 
+        $this->promoteCompanyToCustomer($deal);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Deal created.')]);
 
         return to_route('deals.show', $deal);
@@ -139,6 +142,8 @@ class DealController extends Controller
     {
         $deal->update($request->validated());
 
+        $this->promoteCompanyToCustomer($deal);
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Deal updated.')]);
 
         return to_route('deals.show', $deal);
@@ -156,6 +161,8 @@ class DealController extends Controller
 
         $this->moveCardToPosition($deal, $validated['status'], $validated['position'] ?? 0);
 
+        $this->promoteCompanyToCustomer($deal);
+
         return back();
     }
 
@@ -169,6 +176,27 @@ class DealController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Deal deleted.')]);
 
         return to_route('deals.board');
+    }
+
+    /**
+     * Promote the deal's company to `Customer` once the deal is `Won`.
+     *
+     * Promote-only: a `Lost` deal never demotes, and an existing customer is
+     * left untouched. Deliberately lives here (the app-facing write paths)
+     * rather than a Deal model event, so seeding — which creates a `Won` deal
+     * for every company — does not flip every seeded company to `Customer`.
+     */
+    private function promoteCompanyToCustomer(Deal $deal): void
+    {
+        if ($deal->status !== DealStage::Won) {
+            return;
+        }
+
+        $company = $deal->company;
+
+        if ($company !== null && $company->status !== CompanyStatus::Customer) {
+            $company->update(['status' => CompanyStatus::Customer]);
+        }
     }
 
     /**

@@ -214,6 +214,20 @@ and a `color()` helper for the Kanban columns and badges (used in #3).
   carrying offers with line items across the various statuses).
 - Eloquent models: relationships, enum casts, `decimal:2` casts, `$fillable`.
 
+#### Cross-entity rule: Deal Won → Company Customer
+
+When a Deal reaches `Won`, its Company is automatically promoted to `CompanyStatus::Customer`.
+
+- **Promote-only:** a `Lost` deal never demotes, and a Company already `Customer` is left
+  untouched. Reversals (a Won deal moved back) stay manual.
+- **Scope:** fires from the app-facing Deal write paths (`store`, `update`, `updateStatus`) via
+  a `DealController::promoteCompanyToCustomer()` helper — **not** a Deal model event. This is
+  deliberate: the seeder creates a `Won` deal for every company, so a global event would flip
+  every seeded company to `Customer` and collapse the Companies board.
+- **No cascade to Contacts.** `ContactStatus` is an engagement funnel (New→Contacted→
+  Qualified→Unresponsive) with no "customer/won" terminal, so a won deal has no natural target
+  there; contact status stays manual.
+
 ### 3. Kanban board for each entity (view by statuses / phases)
 
 Each of the four entities gets its own Kanban board: columns are the entity's status enum
