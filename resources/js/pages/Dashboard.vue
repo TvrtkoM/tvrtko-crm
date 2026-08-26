@@ -27,6 +27,7 @@ import {
     create as createOffer,
     show as showOffer,
 } from '@/actions/App/Http/Controllers/OfferController';
+import PipelineChart from '@/components/PipelineChart.vue';
 import StatusBadge from '@/components/StatusBadge.vue';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +48,13 @@ const { stats } = defineProps<{
     recentOffers: Offer[];
     dealStatuses: KanbanColumn[];
     offerStatuses: KanbanColumn[];
+    pipeline: {
+        status: string;
+        label: string;
+        color: string;
+        count: number;
+        value: number;
+    }[];
 }>();
 
 defineOptions({
@@ -142,6 +150,8 @@ const quickCreates = [
                 </Card>
             </Link>
         </div>
+
+        <PipelineChart :pipeline="pipeline" />
 
         <div class="grid gap-4 lg:grid-cols-2">
             <Card>

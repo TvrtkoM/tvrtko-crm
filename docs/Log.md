@@ -18,6 +18,7 @@ status here and append any notes/deviations under **Log**.
 | 6   | Forms (create/edit + offer shortcut)| @docs/6_forms.md            | ✅ Done        |
 | 7   | Overview: tables + show + dashboard | @docs/7_overview.md         | ✅ Done        |
 | 8   | PDF Blade template                  | @docs/8_pdf_template.md     | ✅ Done        |
+| 9   | Dashboard pipeline chart            | @docs/9_dashboard_chart.md  | ✅ Done        |
 
 Legend: ⬜ Not started · 🟡 In progress · ✅ Done
 
@@ -314,3 +315,18 @@ _Append entries as steps complete: date · step · what changed · deviations ·
     the doc's step 8 acceptance criteria don't require new assertions beyond a manual visual check.
     `php artisan test --compact`: 146 tests, 145 passed, 1 pre-existing skip. `vendor/bin/pint
     --dirty --format agent`: clean (no PHP files touched, only the Blade view).
+
+- **2026-08-26 · Step 9 (Dashboard pipeline chart).** Added a dependency-free "Pipeline by stage"
+  bar chart above the Recent deals/offers grid. `DashboardController` gained a `pipeline()` helper
+  (one grouped query, then mapped over `DealStage::cases()` so empty stages still render as zero
+  bars) and a `pipeline` Inertia prop. New `components/PipelineChart.vue` renders one `Card` with a
+  row per stage: label, a `bg-muted` track with an absolutely-positioned `rounded-full` fill sized
+  by `value / maxValue` and colored via `statusColorClasses(stage.color).accent`, and a right-aligned
+  `formatCurrency(value) · count` label — no legend needed since every bar is directly labeled.
+  Wired into `Dashboard.vue` between the KPI grid and the recent-activity grid.
+  - No deviations from the doc.
+  - Tests: extended `tests/Feature/DashboardTest.php` with a case asserting all five `DealStage`
+    entries appear in enum order, an empty stage reports `count: 0`/`value: 0`, and a populated
+    stage sums `value` and counts correctly. `php artisan test --compact`: 154 tests, 153 passed,
+    1 pre-existing skip. `vendor/bin/pint --dirty --format agent`, `npm run types:check`,
+    `npm run lint`, `npm run build`: all clean.

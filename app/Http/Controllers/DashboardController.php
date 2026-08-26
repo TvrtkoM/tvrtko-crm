@@ -39,6 +39,7 @@ class DashboardController extends Controller
                 ->get(),
             'dealStatuses' => DealStage::options(),
             'offerStatuses' => OfferStatus::options(),
+            'pipeline' => $this->pipeline(),
         ]);
     }
 
@@ -53,5 +54,28 @@ class DashboardController extends Controller
             DealStage::Won->value,
             DealStage::Lost->value,
         ]);
+    }
+
+    /**
+     * Total deal value and count per stage, one entry per DealStage (in enum
+     * order) so empty stages still appear as zero bars on the dashboard chart.
+     *
+     * @return array<int, array{status: string, label: string, color: string, count: int, value: float}>
+     */
+    private function pipeline(): array
+    {
+        $dealsByStage = Deal::query()
+            ->selectRaw('status, count(*) as count, coalesce(sum(value), 0) as value')
+            ->groupBy('status')
+            ->get()
+            ->keyBy(fn (Deal $row): string => $row->status->value);
+
+        return collect(DealStage::cases())->map(fn (DealStage $stage): array => [
+            'status' => $stage->value,
+            'label' => $stage->label(),
+            'color' => $stage->color(),
+            'count' => (int) ($dealsByStage[$stage->value]->count ?? 0),
+            'value' => (float) ($dealsByStage[$stage->value]->value ?? 0),
+        ])->all();
     }
 }

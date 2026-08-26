@@ -80,3 +80,29 @@ test('recent activity lists the five newest deals and offers, newest first', fun
             ->etc()
         );
 });
+
+test('the pipeline chart has one entry per deal stage with the correct count and value', function () {
+    $this->actingAs(User::factory()->create());
+
+    $company = Company::factory()->create();
+    Deal::factory()->for($company)->create(['status' => DealStage::Qualification, 'value' => 1000]);
+    Deal::factory()->for($company)->create(['status' => DealStage::Qualification, 'value' => 2500.50]);
+    Deal::factory()->for($company)->create(['status' => DealStage::Won, 'value' => 90000]);
+
+    $this->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('pipeline', 5)
+            ->where('pipeline.0.status', DealStage::Qualification->value)
+            ->where('pipeline.0.label', DealStage::Qualification->label())
+            ->where('pipeline.0.color', DealStage::Qualification->color())
+            ->where('pipeline.0.count', 2)
+            ->where('pipeline.0.value', 3500.5)
+            ->where('pipeline.1.status', DealStage::Proposal->value)
+            ->where('pipeline.1.count', 0)
+            ->where('pipeline.1.value', 0)
+            ->where('pipeline.3.status', DealStage::Won->value)
+            ->where('pipeline.3.count', 1)
+            ->where('pipeline.3.value', 90000)
+            ->etc()
+        );
+});
