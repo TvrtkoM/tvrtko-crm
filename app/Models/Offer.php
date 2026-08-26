@@ -21,6 +21,11 @@ class Offer extends Model
     use HasFactory;
 
     /**
+     * @var list<string>
+     */
+    protected $appends = ['subtotal', 'tax_amount', 'total'];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

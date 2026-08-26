@@ -18,6 +18,11 @@ class OfferItem extends Model
     use HasFactory;
 
     /**
+     * @var list<string>
+     */
+    protected $appends = ['line_total'];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

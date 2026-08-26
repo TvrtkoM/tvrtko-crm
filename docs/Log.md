@@ -12,7 +12,7 @@ status here and append any notes/deviations under **Log**.
 | --- | ----------------------------------- | --------------------------- | -------------- |
 | 1   | Auth trim + seed DemoUser           | @docs/1_auth_trim.md        | ✅ Done        |
 | 2   | Data layer                          | @docs/2_data_layer.md       | ✅ Done        |
-| 3   | Backend for Kanban boards           | @docs/3_backend_kanban.md   | ⬜ Not started |
+| 3   | Backend for Kanban boards           | @docs/3_backend_kanban.md   | ✅ Done        |
 | 4   | PDF route                           | @docs/4_pdf_route.md        | ⬜ Not started |
 | 5   | Kanban frontend                     | @docs/5_kanban_frontend.md  | ⬜ Not started |
 | 6   | Forms (create/edit + offer shortcut)| @docs/6_forms.md            | ⬜ Not started |
@@ -103,3 +103,36 @@ _Append entries as steps complete: date · step · what changed · deviations ·
     40 tests, 39 passed, 1 pre-existing skip (unrelated 2FA test from step 1).
   - `php artisan migrate:fresh --seed` verified clean on SQLite; seeded data spans all statuses
     of all four entities (spot-checked via tinker).
+
+- **2026-08-26 · Step 3 (Backend for Kanban boards).** Added resourceful controllers
+  (`Company`, `Contact`, `Deal`, `Offer`), each with `index`/`create`/`store`/`show`/`edit`/
+  `update`/`destroy` plus the two Kanban-specific actions: `board` (records eager-loaded with
+  their card-content relations, grouped server-side by status value, alongside the enum
+  `options()` for columns) and `updateStatus` (lightweight inline `Rule::enum(...)` validation,
+  `PATCH .../status`, no full-form validation). `Store{Entity}Request`/`Update{Entity}Request`
+  Form Requests cover the field rules from §2 (`authorize()` → `true`, single seeded user).
+  `OfferController@store`/`@update` write `OfferItem`s from the `items[]` payload (update
+  replaces all items — delete + recreate — since there's no other ordering signal); `create`
+  honors an optional `?deal=` query param, eager-loading and passing the bound `Deal` so the
+  frontend can lock the picker. Routes: `Route::resource()` per entity plus `GET
+  {entity}/board` (`{entity}.board`) and `PATCH {entity}/{model}/status` (`{entity}.status`)
+  registered *before* the resource so they aren't swallowed by the `show` route. Ran
+  `php artisan wayfinder:generate` for typed frontend actions. Controllers flash a success
+  toast via `Inertia::flash('toast', [...])` (existing convention from `ProfileController`) and
+  redirect to the record's `show` route (create/update) or the entity's `board` (destroy).
+  - **Deviation from the doc:** added `$appends = ['subtotal', 'tax_amount', 'total']` to
+    `Offer` and `$appends = ['line_total']` to `OfferItem` — these are computed accessors
+    (added in step 2) that don't serialize into Inertia props/JSON by default without being
+    appended, and the Offers board/show need `total` for card content (§3).
+  - **Vue stubs:** created a minimal placeholder page per route (`resources/js/pages/
+    {Company,Contact,Deal,Offer}/{Index,Board,Create,Show,Edit}.vue`, 20 files) — the doc
+    explicitly allows stubs at this step, and Inertia's v3.3.1 testing helpers now verify the
+    referenced page component file exists on disk, so `assertInertia` calls fail without them.
+    Real UI lands in steps 5–7.
+  - Tests: `tests/Feature/Controllers/{Company,Contact,Deal,Offer}ControllerTest.php` — guest
+    redirects on every route, `store`/`update` 422-on-invalid and success+flash+redirect,
+    `updateStatus` success/enum-rejection, `board` component+grouped-props via
+    `assertInertia`, `destroy` cascade/null-on-delete behavior, and (Offer-specific) `items[]`
+    persistence + `offer_number` generation + the `?deal` create-time lock. `php artisan test
+    --compact`: 77 tests, 76 passed, 1 pre-existing skip. `vendor/bin/pint --format agent` on
+    all touched/new files: clean. `npm run build`: clean.
