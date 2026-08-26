@@ -51,10 +51,11 @@ class DealController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Deal/Create', [
             'statuses' => DealStage::options(),
+            'defaultStatus' => $this->defaultStatus($request),
             'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
             'contacts' => Contact::query()->orderBy('first_name')->get(['id', 'company_id', 'first_name', 'last_name']),
         ]);
@@ -133,5 +134,14 @@ class DealController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Deal deleted.')]);
 
         return to_route('deals.board');
+    }
+
+    /**
+     * Resolve the status a new deal defaults to, honoring the optional `?status=`
+     * query param a Kanban column's "new" shortcut appends.
+     */
+    private function defaultStatus(Request $request): string
+    {
+        return ($request->enum('status', DealStage::class) ?? DealStage::cases()[0])->value;
     }
 }

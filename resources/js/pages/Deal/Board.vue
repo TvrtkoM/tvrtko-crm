@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Building2, CalendarDays, Handshake, Plus } from '@lucide/vue';
 import {
     board,
+    create,
     show,
     updateStatus,
 } from '@/actions/App/Http/Controllers/DealController';
@@ -38,7 +39,17 @@ defineOptions({
                 Deals
             </h1>
 
-            <ViewToggle :board-href="board()" />
+            <div class="flex flex-wrap items-center gap-2">
+                <ViewToggle :board-href="board()" />
+
+                <Link
+                    :href="create()"
+                    :class="cn(buttonVariants({ size: 'sm' }))"
+                >
+                    <Plus class="size-4" />
+                    New deal
+                </Link>
+            </div>
         </header>
 
         <KanbanBoard
@@ -47,6 +58,8 @@ defineOptions({
             cards-prop="deals"
             :status-action="(id: number) => updateStatus(id)"
             error-message="Could not move the deal. Please try again."
+            :create-href="(status: string) => create({ query: { status } })"
+            create-label="deal"
         >
             <template #card="{ card }">
                 <div class="flex items-start justify-between gap-2">

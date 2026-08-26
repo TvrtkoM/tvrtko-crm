@@ -65,6 +65,8 @@ function dealLabel(offer: Offer): string {
             cards-prop="offers"
             :status-action="(id: number) => updateStatus(id)"
             error-message="Could not move the offer. Please try again."
+            :create-href="(status: string) => create({ query: { status } })"
+            create-label="offer"
         >
             <template #card="{ card }">
                 <Link

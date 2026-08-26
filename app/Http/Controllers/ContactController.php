@@ -50,10 +50,11 @@ class ContactController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Contact/Create', [
             'statuses' => ContactStatus::options(),
+            'defaultStatus' => $this->defaultStatus($request),
             'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -130,5 +131,14 @@ class ContactController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Contact deleted.')]);
 
         return to_route('contacts.board');
+    }
+
+    /**
+     * Resolve the status a new contact defaults to, honoring the optional `?status=`
+     * query param a Kanban column's "new" shortcut appends.
+     */
+    private function defaultStatus(Request $request): string
+    {
+        return ($request->enum('status', ContactStatus::class) ?? ContactStatus::cases()[0])->value;
     }
 }

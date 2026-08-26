@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Building2, Mail, Users } from '@lucide/vue';
+import { Building2, Mail, Plus, Users } from '@lucide/vue';
 import {
     board,
+    create,
     show,
     updateStatus,
 } from '@/actions/App/Http/Controllers/ContactController';
 import KanbanBoard from '@/components/KanbanBoard.vue';
+import { buttonVariants } from '@/components/ui/button';
 import ViewToggle from '@/components/ViewToggle.vue';
+import { fullName } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { Contact, KanbanCards, KanbanColumn } from '@/types';
 
 defineProps<{
@@ -20,10 +24,6 @@ defineOptions({
         breadcrumbs: [{ title: 'Contacts', href: board() }],
     },
 });
-
-function fullName(contact: Contact): string {
-    return [contact.first_name, contact.last_name].filter(Boolean).join(' ');
-}
 </script>
 
 <template>
@@ -38,7 +38,17 @@ function fullName(contact: Contact): string {
                 Contacts
             </h1>
 
-            <ViewToggle :board-href="board()" />
+            <div class="flex flex-wrap items-center gap-2">
+                <ViewToggle :board-href="board()" />
+
+                <Link
+                    :href="create()"
+                    :class="cn(buttonVariants({ size: 'sm' }))"
+                >
+                    <Plus class="size-4" />
+                    New contact
+                </Link>
+            </div>
         </header>
 
         <KanbanBoard
@@ -47,6 +57,8 @@ function fullName(contact: Contact): string {
             cards-prop="contacts"
             :status-action="(id: number) => updateStatus(id)"
             error-message="Could not move the contact. Please try again."
+            :create-href="(status: string) => create({ query: { status } })"
+            create-label="contact"
         >
             <template #card="{ card }">
                 <Link

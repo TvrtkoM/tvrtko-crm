@@ -63,6 +63,7 @@ class OfferController extends Controller
 
         return Inertia::render('Offer/Create', [
             'statuses' => OfferStatus::options(),
+            'defaultStatus' => ($request->enum('status', OfferStatus::class) ?? OfferStatus::cases()[0])->value,
             'deal' => $deal,
             'deals' => Deal::query()->with('company')->orderBy('title')->get(['id', 'title', 'company_id']),
         ]);

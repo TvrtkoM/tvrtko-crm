@@ -37,3 +37,33 @@ export function formatDate(value: string | null | undefined): string {
 
     return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date);
 }
+
+/**
+ * Join a contact's first and last name, skipping a missing half.
+ */
+export function fullName(contact: {
+    first_name: string;
+    last_name?: string | null;
+}): string {
+    return [contact.first_name, contact.last_name].filter(Boolean).join(' ');
+}
+
+/**
+ * Narrow an ISO date/datetime string to the `YYYY-MM-DD` value a native
+ * `<input type="date">` accepts. Laravel serializes `date` casts as full
+ * ISO timestamps, which the control would otherwise reject.
+ */
+export function toDateInput(value: string | null | undefined): string {
+    return value ? value.slice(0, 10) : '';
+}
+
+/**
+ * Today as a `YYYY-MM-DD` string in the user's own timezone.
+ */
+export function todayInput(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    return `${now.getFullYear()}-${month}-${day}`;
+}

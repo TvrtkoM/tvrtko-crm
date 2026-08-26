@@ -49,10 +49,11 @@ class CompanyController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Company/Create', [
             'statuses' => CompanyStatus::options(),
+            'defaultStatus' => $this->defaultStatus($request),
         ]);
     }
 
@@ -127,5 +128,14 @@ class CompanyController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Company deleted.')]);
 
         return to_route('companies.board');
+    }
+
+    /**
+     * Resolve the status a new company defaults to, honoring the optional `?status=`
+     * query param a Kanban column's "new" shortcut appends.
+     */
+    private function defaultStatus(Request $request): string
+    {
+        return ($request->enum('status', CompanyStatus::class) ?? CompanyStatus::cases()[0])->value;
     }
 }

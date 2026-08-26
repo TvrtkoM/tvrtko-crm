@@ -1,16 +1,47 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { board, create } from '@/actions/App/Http/Controllers/DealController';
+import Heading from '@/components/Heading.vue';
+import type { KanbanColumn } from '@/types';
+import DealForm from './DealForm.vue';
 
-defineOptions({ inheritAttrs: false });
+defineProps<{
+    statuses: KanbanColumn[];
+    companies: { id: number; name: string }[];
+    contacts: {
+        id: number;
+        company_id: number | null;
+        first_name: string;
+        last_name: string | null;
+    }[];
+    defaultStatus: string;
+}>();
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Deals', href: board() },
+            { title: 'New deal', href: create() },
+        ],
+    },
+});
 </script>
 
 <template>
-    <Head title="New Deal" />
+    <Head title="New deal" />
 
-    <div class="flex h-full flex-1 flex-col gap-2 p-4">
-        <h1 class="text-lg font-semibold">New Deal</h1>
-        <p class="text-sm text-muted-foreground">
-            Stub page — the real UI for this route lands in a later step.
-        </p>
+    <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4">
+        <Heading
+            title="New deal"
+            description="Start tracking an opportunity."
+        />
+
+        <DealForm
+            :statuses="statuses"
+            :companies="companies"
+            :contacts="contacts"
+            :default-status="defaultStatus"
+            :cancel-href="board()"
+        />
     </div>
 </template>

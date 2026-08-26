@@ -1,5 +1,7 @@
 <script setup lang="ts" generic="TCard extends Record<string, unknown>">
-import { router } from '@inertiajs/vue3';
+import type { InertiaLinkProps } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
+import { Plus } from '@lucide/vue';
 import { computed, ref, useId, watch } from 'vue';
 import type { DraggableEvent } from 'vue-draggable-plus';
 import { VueDraggable } from 'vue-draggable-plus';
@@ -24,6 +26,10 @@ type Props = {
     statusKey?: string;
     /** Toast shown when persisting a drop fails. */
     errorMessage?: string;
+    /** Renders a per-column "new" shortcut that pre-selects that column's status. */
+    createHref?: (status: string) => NonNullable<InertiaLinkProps['href']>;
+    /** Singular entity name used in the shortcut's tooltip, e.g. "company". */
+    createLabel?: string;
 };
 
 const {
@@ -34,6 +40,8 @@ const {
     idKey = 'id',
     statusKey = 'status',
     errorMessage = 'Could not move the card. Please try again.',
+    createHref = undefined,
+    createLabel = 'card',
 } = defineProps<Props>();
 
 defineSlots<{
@@ -134,6 +142,18 @@ function onCardAdded(column: KanbanColumn, event: DraggableEvent<TCard>): void {
                 >
                     {{ isLoading ? '–' : (lists[column.value]?.length ?? 0) }}
                 </span>
+
+                <Link
+                    v-if="createHref"
+                    :href="createHref(column.value)"
+                    class="rounded-md p-1 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                    :title="`New ${createLabel} in ${column.label}`"
+                >
+                    <Plus class="size-4" />
+                    <span class="sr-only">
+                        New {{ createLabel }} in {{ column.label }}
+                    </span>
+                </Link>
             </header>
 
             <div v-if="isLoading" class="flex flex-col gap-2">

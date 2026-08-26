@@ -1,16 +1,47 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { board, create } from '@/actions/App/Http/Controllers/OfferController';
+import Heading from '@/components/Heading.vue';
+import type { Deal, KanbanColumn } from '@/types';
+import OfferForm from './OfferForm.vue';
 
-defineOptions({ inheritAttrs: false });
+const { deal } = defineProps<{
+    statuses: KanbanColumn[];
+    deals: Pick<Deal, 'id' | 'title' | 'company_id' | 'company'>[];
+    /** Bound from `?deal=` — the "+ Offer" shortcut on a Deal card. */
+    deal: Deal | null;
+    defaultStatus: string;
+}>();
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Offers', href: board() },
+            { title: 'New offer', href: create() },
+        ],
+    },
+});
 </script>
 
 <template>
-    <Head title="New Offer" />
+    <Head title="New offer" />
 
-    <div class="flex h-full flex-1 flex-col gap-2 p-4">
-        <h1 class="text-lg font-semibold">New Offer</h1>
-        <p class="text-sm text-muted-foreground">
-            Stub page — the real UI for this route lands in a later step.
-        </p>
+    <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4">
+        <Heading
+            title="New offer"
+            :description="
+                deal
+                    ? `For ${deal.title}. The offer number is generated on save.`
+                    : 'The offer number is generated on save.'
+            "
+        />
+
+        <OfferForm
+            :statuses="statuses"
+            :deals="deals"
+            :locked-deal="deal"
+            :default-status="defaultStatus"
+            :cancel-href="board()"
+        />
     </div>
 </template>

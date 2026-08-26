@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Building2, Handshake, Users } from '@lucide/vue';
+import { Building2, Handshake, Plus, Users } from '@lucide/vue';
 import {
     board,
+    create,
     show,
     updateStatus,
 } from '@/actions/App/Http/Controllers/CompanyController';
 import KanbanBoard from '@/components/KanbanBoard.vue';
+import { buttonVariants } from '@/components/ui/button';
 import ViewToggle from '@/components/ViewToggle.vue';
+import { cn } from '@/lib/utils';
 import type { Company, KanbanCards, KanbanColumn } from '@/types';
 
 defineProps<{
@@ -34,7 +37,17 @@ defineOptions({
                 Companies
             </h1>
 
-            <ViewToggle :board-href="board()" />
+            <div class="flex flex-wrap items-center gap-2">
+                <ViewToggle :board-href="board()" />
+
+                <Link
+                    :href="create()"
+                    :class="cn(buttonVariants({ size: 'sm' }))"
+                >
+                    <Plus class="size-4" />
+                    New company
+                </Link>
+            </div>
         </header>
 
         <KanbanBoard
@@ -43,6 +56,8 @@ defineOptions({
             cards-prop="companies"
             :status-action="(id: number) => updateStatus(id)"
             error-message="Could not move the company. Please try again."
+            :create-href="(status: string) => create({ query: { status } })"
+            create-label="company"
         >
             <template #card="{ card }">
                 <Link

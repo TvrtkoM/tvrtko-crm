@@ -15,7 +15,7 @@ status here and append any notes/deviations under **Log**.
 | 3   | Backend for Kanban boards           | @docs/3_backend_kanban.md   | ✅ Done        |
 | 4   | PDF route                           | @docs/4_pdf_route.md        | ✅ Done        |
 | 5   | Kanban frontend                     | @docs/5_kanban_frontend.md  | ✅ Done        |
-| 6   | Forms (create/edit + offer shortcut)| @docs/6_forms.md            | ⬜ Not started |
+| 6   | Forms (create/edit + offer shortcut)| @docs/6_forms.md            | ✅ Done        |
 | 7   | Overview: tables + show + dashboard | @docs/7_overview.md         | ⬜ Not started |
 | 8   | PDF Blade template                  | @docs/8_pdf_template.md     | ⬜ Not started |
 
@@ -189,4 +189,55 @@ _Append entries as steps complete: date · step · what changed · deviations ·
     …/status` moves the card between columns after reload; an invalid one 422s and leaves it
     put). `php artisan test --compact`: 88 tests, 87 passed, 1 pre-existing skip.
     `vendor/bin/pint --dirty --format agent`: clean. `npm run build`, `npm run types:check`,
+    `npm run lint:check`, `npm run format:check`: all clean.
+
+- **2026-08-26 · Step 6 (Forms).** Scaffolded the shadcn-vue **Textarea** component file
+  (`components/ui/textarea/`). Added full-page create/edit forms for all four entities:
+  `pages/{Entity}/Create.vue` + `Edit.vue`, both rendering a colocated shared
+  `pages/{Entity}/{Entity}Form.vue` partial that owns the `useForm` state and submits through the
+  Wayfinder-typed `store`/`update` actions (`form.submit(entity ? update(id) : store(), {
+  preserveScroll: true })`). Every field carries an inline `form.errors` message; the submit
+  button shows a `Spinner` and is disabled while `form.processing`; Cancel is a `<Link>` back to
+  the board (create) or the record's show page (edit).
+  - Two new shared components keep the four forms terse: `components/FormField.vue` (label +
+    slot + `InputError` + optional hint) and `components/SelectInput.vue` (shadcn `Select`
+    wrapper that maps a `null` value to a `__none__` sentinel — Reka's Select can't hold an
+    empty string — and casts numeric ids back to numbers for the relationship pickers).
+    Dates are native `<input type="date">` rendered through the shadcn `Input`, so they inherit
+    the app's field styling. `lib/format.ts` gained `fullName()` (moved out of
+    `Contact/Board.vue`, which now imports it), `toDateInput()` (Laravel serializes `date`
+    casts as full ISO timestamps, which a date input rejects) and `todayInput()`.
+  - **Offer form:** `deal_id` is a `Select` that is prefilled and **disabled** when the
+    controller passed a bound `Deal` (from `?deal`); the line-items repeater is an `items[]`
+    array in `useForm` with add/remove row buttons (remove disabled at one row, since the
+    backend requires `min:1`), no drag-reorder — `position` is the row index, assigned
+    server-side in `syncItems()`. Per-row `line_total`, then `subtotal → tax → total`, are
+    client-side computeds mirroring the server accessors, EUR-formatted and recomputed as the
+    user types. `offer_number` is not an input; the create page says it is generated on save.
+    On create with a locked deal the title defaults to the deal's title (PROJECT.md §5's
+    optional convenience).
+  - **Prefill:** each `create()` controller action now resolves `?status` via
+    `$request->enum('status', {Enum}::class)` and passes `defaultStatus` (falling back to the
+    first enum case). To give that param a producer — and because step 6's acceptance criteria
+    require every entity to be creatable from the UI — `KanbanBoard.vue` gained two optional
+    props (`createHref`, `createLabel`) rendering a "+" shortcut in each column header, and the
+    Companies/Contacts/Deals boards gained the "+ New {entity}" header button the Offers board
+    already had. Offer create defaults: `issue_date` = today, `tax_rate` = 25, one empty row.
+  - **Deviations from the doc:** (1) the post-save flow and the flash toast were already in
+    place from step 3 — controllers redirect to the record's show page and flash via
+    `Inertia::flash('toast', …)`, which Inertia v3 delivers as flash data (not a `share()`d prop)
+    and `lib/flashToast.ts` turns into a `vue-sonner` toast; `<Toaster />` is already mounted in
+    both app layouts, so nothing was added to `HandleInertiaRequests`. (2) The locked deal
+    picker is a disabled `Select` **without** a companion hidden input: `useForm` submits from
+    JS state, so a hidden field would be inert. (3) The Deal form filters the contact picker to
+    the selected company (the controller already ships `company_id` with each contact option)
+    and clears an incompatible contact when the company changes.
+  - Tests: new `tests/Feature/FormsTest.php` (25 tests) — create/edit pages render the right
+    component with the props the forms consume, `?status` preselection per entity plus the
+    unknown-value fallback, the picker option payloads (company/contact/deal, deal options
+    carrying their company), the `?deal` lock, rejected submissions returning to the form with
+    errors and persisting nothing (all four entities, plus per-row `items.*` errors), and an
+    offer create asserting row order/positions, generated number and the totals math.
+    `php artisan test --compact`: 113 tests, 112 passed, 1 pre-existing skip.
+    `vendor/bin/pint --dirty --format agent`, `npm run build`, `npm run types:check`,
     `npm run lint:check`, `npm run format:check`: all clean.
