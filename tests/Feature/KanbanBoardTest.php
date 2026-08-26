@@ -124,6 +124,42 @@ test('a drag persists the new status and the board reflects it after a reload', 
     );
 });
 
+test('a drag drops the card at the released index instead of the top', function () {
+    $first = Deal::factory()->create(['status' => DealStage::Won]);
+    $second = Deal::factory()->create(['status' => DealStage::Won]);
+    $moved = Deal::factory()->create(['status' => DealStage::Qualification]);
+
+    // Drop the moved card between the two existing Won cards.
+    $this->patch(route('deals.status', $moved), [
+        'status' => DealStage::Won->value,
+        'position' => 1,
+    ])->assertRedirect();
+
+    $this->get(route('deals.board'))->assertInertia(fn (Assert $page) => $page
+        ->where('deals.'.DealStage::Won->value.'.0.id', $first->id)
+        ->where('deals.'.DealStage::Won->value.'.1.id', $moved->id)
+        ->where('deals.'.DealStage::Won->value.'.2.id', $second->id)
+        ->etc()
+    );
+});
+
+test('reordering within a column persists the new order', function () {
+    $first = Deal::factory()->create(['status' => DealStage::Won]);
+    $second = Deal::factory()->create(['status' => DealStage::Won]);
+
+    // Move the second card ahead of the first, staying in the same column.
+    $this->patch(route('deals.status', $second), [
+        'status' => DealStage::Won->value,
+        'position' => 0,
+    ])->assertRedirect();
+
+    $this->get(route('deals.board'))->assertInertia(fn (Assert $page) => $page
+        ->where('deals.'.DealStage::Won->value.'.0.id', $second->id)
+        ->where('deals.'.DealStage::Won->value.'.1.id', $first->id)
+        ->etc()
+    );
+});
+
 test('a rejected drag leaves the card in its original column', function () {
     $deal = Deal::factory()->create(['status' => DealStage::Qualification]);
 

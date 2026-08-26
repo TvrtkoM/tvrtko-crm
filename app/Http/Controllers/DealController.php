@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\DealStage;
 use App\Enums\OfferStatus;
 use App\Http\Controllers\Concerns\BuildsIndexQueries;
+use App\Http\Controllers\Concerns\ReordersKanbanCards;
 use App\Http\Requests\StoreDealRequest;
 use App\Http\Requests\UpdateDealRequest;
 use App\Models\Company;
@@ -21,6 +22,7 @@ use Inertia\Response;
 class DealController extends Controller
 {
     use BuildsIndexQueries;
+    use ReordersKanbanCards;
 
     /**
      * Display a listing of the resource.
@@ -64,7 +66,8 @@ class DealController extends Controller
     {
         $deals = Deal::query()
             ->with(['company', 'contact'])
-            ->latest('updated_at')
+            ->orderBy('position')
+            ->orderBy('id')
             ->get();
 
         return Inertia::render('Deal/Board', [
@@ -148,9 +151,10 @@ class DealController extends Controller
     {
         $validated = $request->validate([
             'status' => ['required', Rule::enum(DealStage::class)],
+            'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $deal->update($validated);
+        $this->moveCardToPosition($deal, $validated['status'], $validated['position'] ?? 0);
 
         return back();
     }

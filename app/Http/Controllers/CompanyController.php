@@ -6,6 +6,7 @@ use App\Enums\CompanyStatus;
 use App\Enums\ContactStatus;
 use App\Enums\DealStage;
 use App\Http\Controllers\Concerns\BuildsIndexQueries;
+use App\Http\Controllers\Concerns\ReordersKanbanCards;
 use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
 use App\Models\Company;
@@ -21,6 +22,7 @@ use Inertia\Response;
 class CompanyController extends Controller
 {
     use BuildsIndexQueries;
+    use ReordersKanbanCards;
 
     /**
      * Display a listing of the resource.
@@ -63,7 +65,8 @@ class CompanyController extends Controller
     {
         $companies = Company::query()
             ->withCount(['contacts', 'deals'])
-            ->latest('updated_at')
+            ->orderBy('position')
+            ->orderBy('id')
             ->get();
 
         return Inertia::render('Company/Board', [
@@ -144,9 +147,10 @@ class CompanyController extends Controller
     {
         $validated = $request->validate([
             'status' => ['required', Rule::enum(CompanyStatus::class)],
+            'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $company->update($validated);
+        $this->moveCardToPosition($company, $validated['status'], $validated['position'] ?? 0);
 
         return back();
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\OfferStatus;
 use App\Http\Controllers\Concerns\BuildsIndexQueries;
+use App\Http\Controllers\Concerns\ReordersKanbanCards;
 use App\Http\Requests\StoreOfferRequest;
 use App\Http\Requests\UpdateOfferRequest;
 use App\Models\Deal;
@@ -22,6 +23,7 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 class OfferController extends Controller
 {
     use BuildsIndexQueries;
+    use ReordersKanbanCards;
 
     /**
      * Display a listing of the resource.
@@ -68,7 +70,8 @@ class OfferController extends Controller
     {
         $offers = Offer::query()
             ->with(['deal.company', 'items'])
-            ->latest('updated_at')
+            ->orderBy('position')
+            ->orderBy('id')
             ->get();
 
         return Inertia::render('Offer/Board', [
@@ -182,9 +185,10 @@ class OfferController extends Controller
     {
         $validated = $request->validate([
             'status' => ['required', Rule::enum(OfferStatus::class)],
+            'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $offer->update($validated);
+        $this->moveCardToPosition($offer, $validated['status'], $validated['position'] ?? 0);
 
         return back();
     }

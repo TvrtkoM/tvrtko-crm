@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ContactStatus;
 use App\Enums\DealStage;
 use App\Http\Controllers\Concerns\BuildsIndexQueries;
+use App\Http\Controllers\Concerns\ReordersKanbanCards;
 use App\Http\Requests\StoreContactRequest;
 use App\Http\Requests\UpdateContactRequest;
 use App\Models\Company;
@@ -20,6 +21,7 @@ use Inertia\Response;
 class ContactController extends Controller
 {
     use BuildsIndexQueries;
+    use ReordersKanbanCards;
 
     /**
      * Display a listing of the resource.
@@ -73,7 +75,8 @@ class ContactController extends Controller
     {
         $contacts = Contact::query()
             ->with('company')
-            ->latest('updated_at')
+            ->orderBy('position')
+            ->orderBy('id')
             ->get();
 
         return Inertia::render('Contact/Board', [
@@ -154,9 +157,10 @@ class ContactController extends Controller
     {
         $validated = $request->validate([
             'status' => ['required', Rule::enum(ContactStatus::class)],
+            'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $contact->update($validated);
+        $this->moveCardToPosition($contact, $validated['status'], $validated['position'] ?? 0);
 
         return back();
     }

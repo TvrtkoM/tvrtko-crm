@@ -79,10 +79,12 @@ function dealLabel(offer: Offer): string {
                 </Link>
 
                 <p
-                    class="mt-1 inline-flex items-center gap-1 truncate text-xs text-muted-foreground"
+                    class="mt-1 flex items-start gap-1 text-xs text-muted-foreground"
                 >
-                    <Handshake class="size-3.5 shrink-0" />
-                    {{ dealLabel(card) }}
+                    <Handshake class="mt-0.5 size-3.5 shrink-0" />
+                    <span class="line-clamp-2 min-w-0 break-words">
+                        {{ dealLabel(card) }}
+                    </span>
                 </p>
 
                 <div

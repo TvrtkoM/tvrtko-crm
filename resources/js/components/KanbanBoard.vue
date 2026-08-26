@@ -76,13 +76,17 @@ function cardId(card: TCard): number {
 }
 
 /**
- * Persist a cross-column drop: the card moves into the target column
- * immediately, and Inertia rolls the props back if the request fails.
+ * Persist a drop at the exact index it was released — whether the card moved
+ * into another column (`@add`) or was reordered within its column (`@update`).
+ * The board updates optimistically and Inertia rolls the props back on failure.
  */
-function onCardAdded(column: KanbanColumn, event: DraggableEvent<TCard>): void {
+function onCardDropped(
+    column: KanbanColumn,
+    event: DraggableEvent<TCard>,
+): void {
     const card = event.data;
 
-    if (!card || card[statusKey] === column.value) {
+    if (!card) {
         return;
     }
 
@@ -110,7 +114,7 @@ function onCardAdded(column: KanbanColumn, event: DraggableEvent<TCard>): void {
         })
         .patch(
             statusAction(id).url,
-            { [statusKey]: column.value },
+            { [statusKey]: column.value, position: index },
             {
                 preserveScroll: true,
                 preserveState: true,
@@ -183,7 +187,11 @@ function onCardAdded(column: KanbanColumn, event: DraggableEvent<TCard>): void {
                     drag-class="shadow-lg"
                     @add="
                         (event: DraggableEvent<TCard>) =>
-                            onCardAdded(column, event)
+                            onCardDropped(column, event)
+                    "
+                    @update="
+                        (event: DraggableEvent<TCard>) =>
+                            onCardDropped(column, event)
                     "
                 >
                     <article
