@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OfferStatus;
+use App\Http\Controllers\Concerns\BuildsIndexQueries;
 use App\Http\Requests\StoreOfferRequest;
 use App\Http\Requests\UpdateOfferRequest;
 use App\Models\Deal;
 use App\Models\Offer;
+use App\Models\OfferItem;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -17,19 +21,43 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class OfferController extends Controller
 {
+    use BuildsIndexQueries;
+
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $filters = $this->indexFilters(
+            $request,
+            OfferStatus::class,
+            sortable: ['offer_number', 'total', 'status', 'issue_date'],
+            defaultSort: 'issue_date',
+        );
+
         $offers = Offer::query()
             ->with(['deal.company', 'items'])
-            ->latest()
-            ->paginate(15)
-            ->withQueryString();
+            ->when($filters['search'], fn (Builder $query, string $search) => $query->where(
+                fn (Builder $query) => $query
+                    ->whereLike('offer_number', "%{$search}%")
+                    ->orWhereLike('title', "%{$search}%")
+                    ->orWhereHas('deal', fn (Builder $deal) => $deal
+                        ->whereLike('title', "%{$search}%")
+                        ->orWhereHas('company', fn (Builder $company) => $company->whereLike('name', "%{$search}%")))
+            ))
+            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status));
+
+        $offers = $filters['sort'] === 'total'
+            ? $offers->orderBy($this->totalSubquery(), $filters['dir'])
+            : $offers->orderBy($filters['sort'], $filters['dir']);
 
         return Inertia::render('Offer/Index', [
-            'offers' => $offers,
+            'offers' => $offers
+                ->orderBy('id', 'desc')
+                ->paginate(15)
+                ->withQueryString(),
+            'filters' => $filters,
+            'statuses' => OfferStatus::options(),
         ]);
     }
 
@@ -92,10 +120,15 @@ class OfferController extends Controller
      */
     public function show(Offer $offer): Response
     {
-        $offer->load(['deal.company', 'deal.contact', 'items']);
+        $offer->load([
+            'deal.company',
+            'deal.contact',
+            'items' => fn (HasMany $items) => $items->orderBy('position'),
+        ]);
 
         return Inertia::render('Offer/Show', [
             'offer' => $offer,
+            'statuses' => OfferStatus::options(),
         ]);
     }
 
@@ -166,6 +199,21 @@ class OfferController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Offer deleted.')]);
 
         return to_route('offers.board');
+    }
+
+    /**
+     * Correlated subquery mirroring the `total` accessor, so the list view can sort by a
+     * value that is computed rather than stored. Portable across SQLite and Postgres —
+     * the `100.0` literal matters: SQLite stores `decimal` columns with NUMERIC affinity,
+     * so dividing by an integer `100` would truncate the rate to zero.
+     *
+     * @return Builder<OfferItem>
+     */
+    private function totalSubquery(): Builder
+    {
+        return OfferItem::query()
+            ->selectRaw('coalesce(sum(offer_items.quantity * offer_items.unit_price), 0) * (1 + offers.tax_rate / 100.0)')
+            ->whereColumn('offer_items.offer_id', 'offers.id');
     }
 
     /**

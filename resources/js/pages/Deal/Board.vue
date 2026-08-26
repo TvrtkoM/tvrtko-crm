@@ -4,6 +4,7 @@ import { Building2, CalendarDays, Handshake, Plus } from '@lucide/vue';
 import {
     board,
     create,
+    index,
     show,
     updateStatus,
 } from '@/actions/App/Http/Controllers/DealController';
@@ -40,7 +41,7 @@ defineOptions({
             </h1>
 
             <div class="flex flex-wrap items-center gap-2">
-                <ViewToggle :board-href="board()" />
+                <ViewToggle :board-href="board()" :list-href="index()" />
 
                 <Link
                     :href="create()"

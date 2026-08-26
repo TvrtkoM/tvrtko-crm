@@ -16,7 +16,7 @@ status here and append any notes/deviations under **Log**.
 | 4   | PDF route                           | @docs/4_pdf_route.md        | ✅ Done        |
 | 5   | Kanban frontend                     | @docs/5_kanban_frontend.md  | ✅ Done        |
 | 6   | Forms (create/edit + offer shortcut)| @docs/6_forms.md            | ✅ Done        |
-| 7   | Overview: tables + show + dashboard | @docs/7_overview.md         | ⬜ Not started |
+| 7   | Overview: tables + show + dashboard | @docs/7_overview.md         | ✅ Done        |
 | 8   | PDF Blade template                  | @docs/8_pdf_template.md     | ⬜ Not started |
 
 Legend: ⬜ Not started · 🟡 In progress · ✅ Done
@@ -241,3 +241,55 @@ _Append entries as steps complete: date · step · what changed · deviations ·
     `php artisan test --compact`: 113 tests, 112 passed, 1 pre-existing skip.
     `vendor/bin/pint --dirty --format agent`, `npm run build`, `npm run types:check`,
     `npm run lint:check`, `npm run format:check`: all clean.
+
+- **2026-08-26 · Step 7 (Overview: tables + show pages + dashboard).** Scaffolded the shadcn-vue
+  **Table** and **Pagination** component files. Fleshed out every `{Entity}Controller@index`:
+  `?search`/`?status`/`?sort`/`?dir`/`?page` are resolved by the new
+  `app/Http/Controllers/Concerns/BuildsIndexQueries::indexFilters()` (whitelists sortable columns,
+  normalizes `dir`, ignores an unknown `status`), applied with `when()` guards, and echoed back as
+  a `filters` prop alongside the paginator and the enum `options()`. Search spans the entity's own
+  text columns plus its parents (contact → company, deal → company/contact, offer → deal/company)
+  via `whereLike`/`orWhereHas`. Non-column sorts use subqueries: contacts by company name
+  (`orderBy(Company::select('name')->whereColumn(...))`), offers by their **computed total**
+  (`OfferController::totalSubquery()`, a correlated `sum(quantity * unit_price) * (1 + tax_rate /
+  100.0)`). Every list adds an `orderBy('id', 'desc')` tiebreaker so pagination is stable.
+  - New `DashboardController` (invokable) replaces `Route::inertia('dashboard', …)`: KPI counts
+    (companies, contacts, open deals, open pipeline €, offers awaiting response), the five most
+    recent deals and offers, and the deal/offer enum options for their badges.
+  - Show actions now eager-load what each page renders — Company: contacts + deals (with their
+    contact) + `pipelineValue`; Contact: company + the deals it leads; Deal: company, contact,
+    offers with items; Offer: `deal.company`, `deal.contact`, items ordered by `position` — plus
+    the related entities' `options()` so inline lists can render status badges.
+  - Frontend: `pages/{Entity}/Index.vue` (shadcn `Table`, sortable headers, debounced search,
+    status filter, pagination, per-row `dropdown-menu` with View/Edit/Delete — plus Download PDF
+    on offers — and an empty state) and `pages/{Entity}/Show.vue` (header with status badge +
+    Edit/Delete, detail `dl`, inline related tables; the Offer page adds the line-items table,
+    subtotal → tax → total and the Download PDF button, the Deal page the "+ Offer" shortcut).
+    `Dashboard.vue` replaces the placeholder stub. New shared pieces:
+    `composables/useIndexFilters.ts` (debounced search, writable `status` computed, `toggleSort`,
+    `goToPage`, `reset` — all `preserveState`/`preserveScroll`/`replace` visits),
+    `components/{TableFilters,SortableHeader,TablePagination,RowActions,StatusBadge,
+    ConfirmDeleteDialog,DetailField}.vue`, and `types/pagination.ts` (`Paginator<T>`,
+    `IndexFilters`). `ViewToggle` lost its disabled half — both entity views now exist — and the
+    four boards pass `:list-href="index()"`.
+  - **Deviations / notes:** (1) the shadcn CLI rewrote `package.json`'s `@lucide/vue` and `reka-ui`
+    ranges to the already-installed versions; reverted, since dependency changes need approval —
+    no package was actually added or upgraded. (2) The scaffolded `PaginationEllipsis` imports
+    `MoreHorizontal`; switched to `Ellipsis` to match the icon names used everywhere else.
+    (3) Sorting offers by total first shipped as `/ 100` and silently ignored the tax rate: SQLite
+    gives `decimal` columns NUMERIC affinity, so `25.00 / 100` is integer division. `/ 100.0`
+    fixes it on both SQLite and Postgres — the ordering test caught it. (4) `wayfinder:generate`
+    must be run as `--with-form` (the Vite plugin sets `formVariants: true`); a bare run drops the
+    `.form()` helpers the starter-kit auth/settings pages use. Recorded (1)–(4)'s durable halves
+    plus the list-view conventions in `.ai/rules`.
+  - Tests: `tests/Feature/EntityIndexTest.php` (19) — every list renders its component with
+    paginator meta, filter state and column options; search across each entity's own and parent
+    columns; status filter and unknown-status fallback; sort both directions; non-whitelisted
+    `sort`/`dir` falling back; 15-per-page pagination that keeps filters on page 2; offers ordered
+    by computed total including tax; delete from the list. `tests/Feature/EntityShowTest.php` (12)
+    — component + relations per entity, related lists excluding other companies' records, ordered
+    line items and totals math, delete from the show page for all four entities. `DashboardTest`
+    rewritten for the KPI numbers and recent-activity lists. `php artisan test --compact`:
+    146 tests, 145 passed, 1 pre-existing skip. `vendor/bin/pint --dirty --format agent`,
+    `npm run lint:check`, `npm run format:check`, `npm run types:check`, `npm run build`: clean.
+    `vendor/bin/phpstan analyse`: the same 7 pre-existing errors as before the step, none new.

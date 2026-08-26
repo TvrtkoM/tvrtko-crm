@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ContactStatus;
+use App\Enums\DealStage;
+use App\Http\Controllers\Concerns\BuildsIndexQueries;
 use App\Http\Requests\StoreContactRequest;
 use App\Http\Requests\UpdateContactRequest;
 use App\Models\Company;
 use App\Models\Contact;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,19 +19,50 @@ use Inertia\Response;
 
 class ContactController extends Controller
 {
+    use BuildsIndexQueries;
+
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $filters = $this->indexFilters(
+            $request,
+            ContactStatus::class,
+            sortable: ['name', 'company', 'status', 'created_at'],
+            defaultSort: 'created_at',
+        );
+
         $contacts = Contact::query()
             ->with('company')
-            ->latest()
-            ->paginate(15)
-            ->withQueryString();
+            ->when($filters['search'], fn (Builder $query, string $search) => $query->where(
+                fn (Builder $query) => $query
+                    ->whereLike('first_name', "%{$search}%")
+                    ->orWhereLike('last_name', "%{$search}%")
+                    ->orWhereLike('email', "%{$search}%")
+                    ->orWhereLike('job_title', "%{$search}%")
+                    ->orWhereHas('company', fn (Builder $company) => $company->whereLike('name', "%{$search}%"))
+            ))
+            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status));
+
+        $contacts = match ($filters['sort']) {
+            'name' => $contacts
+                ->orderBy('first_name', $filters['dir'])
+                ->orderBy('last_name', $filters['dir']),
+            'company' => $contacts->orderBy(
+                Company::query()->select('name')->whereColumn('companies.id', 'contacts.company_id'),
+                $filters['dir'],
+            ),
+            default => $contacts->orderBy($filters['sort'], $filters['dir']),
+        };
 
         return Inertia::render('Contact/Index', [
-            'contacts' => $contacts,
+            'contacts' => $contacts
+                ->orderBy('id', 'desc')
+                ->paginate(15)
+                ->withQueryString(),
+            'filters' => $filters,
+            'statuses' => ContactStatus::options(),
         ]);
     }
 
@@ -76,10 +111,15 @@ class ContactController extends Controller
      */
     public function show(Contact $contact): Response
     {
-        $contact->load(['company', 'deals']);
+        $contact->load([
+            'company',
+            'deals' => fn (HasMany $deals) => $deals->with('company')->latest('updated_at'),
+        ]);
 
         return Inertia::render('Contact/Show', [
             'contact' => $contact,
+            'statuses' => ContactStatus::options(),
+            'dealStatuses' => DealStage::options(),
         ]);
     }
 

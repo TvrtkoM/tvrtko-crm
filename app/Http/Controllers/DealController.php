@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DealStage;
+use App\Enums\OfferStatus;
+use App\Http\Controllers\Concerns\BuildsIndexQueries;
 use App\Http\Requests\StoreDealRequest;
 use App\Http\Requests\UpdateDealRequest;
 use App\Models\Company;
 use App\Models\Contact;
 use App\Models\Deal;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,19 +20,40 @@ use Inertia\Response;
 
 class DealController extends Controller
 {
+    use BuildsIndexQueries;
+
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $filters = $this->indexFilters(
+            $request,
+            DealStage::class,
+            sortable: ['title', 'value', 'status', 'expected_close_date', 'created_at'],
+            defaultSort: 'created_at',
+        );
+
         $deals = Deal::query()
             ->with(['company', 'contact'])
-            ->latest()
+            ->when($filters['search'], fn (Builder $query, string $search) => $query->where(
+                fn (Builder $query) => $query
+                    ->whereLike('title', "%{$search}%")
+                    ->orWhereHas('company', fn (Builder $company) => $company->whereLike('name', "%{$search}%"))
+                    ->orWhereHas('contact', fn (Builder $contact) => $contact
+                        ->whereLike('first_name', "%{$search}%")
+                        ->orWhereLike('last_name', "%{$search}%"))
+            ))
+            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status))
+            ->orderBy($filters['sort'], $filters['dir'])
+            ->orderBy('id', 'desc')
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Deal/Index', [
             'deals' => $deals,
+            'filters' => $filters,
+            'statuses' => DealStage::options(),
         ]);
     }
 
@@ -78,10 +103,16 @@ class DealController extends Controller
      */
     public function show(Deal $deal): Response
     {
-        $deal->load(['company', 'contact', 'offers']);
+        $deal->load([
+            'company',
+            'contact',
+            'offers' => fn (HasMany $offers) => $offers->with('items')->latest('updated_at'),
+        ]);
 
         return Inertia::render('Deal/Show', [
             'deal' => $deal,
+            'statuses' => DealStage::options(),
+            'offerStatuses' => OfferStatus::options(),
         ]);
     }
 

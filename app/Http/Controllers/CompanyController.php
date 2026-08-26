@@ -3,9 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CompanyStatus;
+use App\Enums\ContactStatus;
+use App\Enums\DealStage;
+use App\Http\Controllers\Concerns\BuildsIndexQueries;
 use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
 use App\Models\Company;
+use App\Models\Deal;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -14,19 +20,39 @@ use Inertia\Response;
 
 class CompanyController extends Controller
 {
+    use BuildsIndexQueries;
+
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $filters = $this->indexFilters(
+            $request,
+            CompanyStatus::class,
+            sortable: ['name', 'status', 'created_at'],
+            defaultSort: 'created_at',
+        );
+
         $companies = Company::query()
             ->withCount(['contacts', 'deals'])
-            ->latest()
+            ->when($filters['search'], fn (Builder $query, string $search) => $query->where(
+                fn (Builder $query) => $query
+                    ->whereLike('name', "%{$search}%")
+                    ->orWhereLike('email', "%{$search}%")
+                    ->orWhereLike('industry', "%{$search}%")
+                    ->orWhereLike('city', "%{$search}%")
+            ))
+            ->when($filters['status'], fn (Builder $query, string $status) => $query->where('status', $status))
+            ->orderBy($filters['sort'], $filters['dir'])
+            ->orderBy('id', 'desc')
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('Company/Index', [
             'companies' => $companies,
+            'filters' => $filters,
+            'statuses' => CompanyStatus::options(),
         ]);
     }
 
@@ -74,10 +100,17 @@ class CompanyController extends Controller
      */
     public function show(Company $company): Response
     {
-        $company->load(['contacts', 'deals']);
+        $company->load([
+            'contacts' => fn (HasMany $contacts) => $contacts->orderBy('first_name')->orderBy('last_name'),
+            'deals' => fn (HasMany $deals) => $deals->with('contact')->latest('updated_at'),
+        ]);
 
         return Inertia::render('Company/Show', [
             'company' => $company,
+            'statuses' => CompanyStatus::options(),
+            'contactStatuses' => ContactStatus::options(),
+            'dealStatuses' => DealStage::options(),
+            'pipelineValue' => $company->deals->sum(fn (Deal $deal): float => (float) $deal->value),
         ]);
     }
 

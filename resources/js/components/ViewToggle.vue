@@ -7,11 +7,10 @@ import { cn } from '@/lib/utils';
 
 type Props = {
     boardHref: NonNullable<InertiaLinkProps['href']>;
-    /** Omitted until the list views land — the "List" half renders disabled. */
-    listHref?: NonNullable<InertiaLinkProps['href']>;
+    listHref: NonNullable<InertiaLinkProps['href']>;
 };
 
-const { boardHref, listHref = undefined } = defineProps<Props>();
+const { boardHref, listHref } = defineProps<Props>();
 
 const { isCurrentUrl } = useCurrentUrl();
 
@@ -42,7 +41,6 @@ const itemClass =
         </Link>
 
         <Link
-            v-if="listHref"
             :href="listHref"
             :class="
                 cn(
@@ -57,16 +55,5 @@ const itemClass =
             <Table2 class="size-4" />
             List
         </Link>
-
-        <button
-            v-else
-            type="button"
-            disabled
-            :class="cn(itemClass, 'text-muted-foreground/60')"
-            title="The list view lands in a later step"
-        >
-            <Table2 class="size-4" />
-            List
-        </button>
     </div>
 </template>

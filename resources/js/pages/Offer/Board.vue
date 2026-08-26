@@ -4,6 +4,7 @@ import { CalendarDays, FileText, Handshake, Plus } from '@lucide/vue';
 import {
     board,
     create,
+    index,
     show,
     updateStatus,
 } from '@/actions/App/Http/Controllers/OfferController';
@@ -47,7 +48,7 @@ function dealLabel(offer: Offer): string {
             </h1>
 
             <div class="flex flex-wrap items-center gap-2">
-                <ViewToggle :board-href="board()" />
+                <ViewToggle :board-href="board()" :list-href="index()" />
 
                 <Link
                     :href="create()"

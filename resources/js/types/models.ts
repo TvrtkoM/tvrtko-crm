@@ -12,6 +12,8 @@ export type Company = {
     notes: string | null;
     contacts_count?: number;
     deals_count?: number;
+    contacts?: Contact[];
+    deals?: Deal[];
     created_at: string;
     updated_at: string;
 };
@@ -27,6 +29,7 @@ export type Contact = {
     status: string;
     notes: string | null;
     company?: Company | null;
+    deals?: Deal[];
     created_at: string;
     updated_at: string;
 };
@@ -42,6 +45,7 @@ export type Deal = {
     notes: string | null;
     company?: Company;
     contact?: Contact | null;
+    offers?: Offer[];
     created_at: string;
     updated_at: string;
 };
