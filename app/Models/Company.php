@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property CompanyStatus $status
+ */
 #[Fillable([
     'name', 'email', 'phone', 'website', 'industry', 'address', 'city', 'country', 'status', 'notes',
 ])]

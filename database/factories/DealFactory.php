@@ -22,7 +22,7 @@ class DealFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'contact_id' => null,
-            'title' => fake()->catchPhrase(),
+            'title' => fake()->words(3, true),
             'value' => fake()->randomFloat(2, 1000, 100000),
             'expected_close_date' => fake()->optional()->dateTimeBetween('now', '+6 months'),
             'status' => fake()->randomElement(DealStage::cases()),

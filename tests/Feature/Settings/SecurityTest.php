@@ -13,9 +13,10 @@ test('security page is displayed', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('settings/Security')
-            ->where('canManagePasskeys', false)
-            ->where('passkeys', [])
-            ->where('canManageTwoFactor', false)
+            ->has('passwordRules')
+            ->missing('canManagePasskeys')
+            ->missing('passkeys')
+            ->missing('canManageTwoFactor')
             ->missing('twoFactorEnabled')
             ->missing('requiresConfirmation'),
         );

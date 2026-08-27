@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property DealStage $status
+ */
 #[Fillable([
     'company_id', 'contact_id', 'title', 'value', 'expected_close_date', 'status', 'notes',
 ])]

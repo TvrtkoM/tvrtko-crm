@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
+/**
+ * @property OfferStatus $status
+ */
 #[Fillable([
     'deal_id', 'title', 'status', 'issue_date', 'valid_until', 'tax_rate', 'notes',
 ])]
