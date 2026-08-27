@@ -37,7 +37,9 @@ const maxValue = computed(() =>
                     :key="stage.status"
                     class="flex items-center gap-3"
                 >
-                    <span class="w-28 shrink-0 truncate text-sm text-muted-foreground">
+                    <span
+                        class="w-28 shrink-0 truncate text-sm text-muted-foreground"
+                    >
                         {{ stage.label }}
                     </span>
 
@@ -48,7 +50,9 @@ const maxValue = computed(() =>
                         <div
                             class="absolute inset-y-0 left-0 rounded-full"
                             :class="cn(statusColorClasses(stage.color).accent)"
-                            :style="{ width: `${(stage.value / maxValue) * 100}%` }"
+                            :style="{
+                                width: `${(stage.value / maxValue) * 100}%`,
+                            }"
                         />
                     </div>
 
